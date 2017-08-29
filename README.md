@@ -7,6 +7,17 @@ GitHub: Authorized Keys
 
 A simple `authorized_keys` file generator backed by GitHub organisations & teams.
 
+## Usage
+
+```
+export GITHUB_TOKEN=xxxx
+github-keys \
+  --org org-name \
+  --team team-name \
+  --file ~/.ssh/authorized_keys \
+  --owner $(whoami)
+```
+
 ## How it works
 
 * Writes a new `authorized_keys` file
