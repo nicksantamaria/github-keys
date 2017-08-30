@@ -73,7 +73,6 @@ func syncKeys(ctx context.Context, gh *github.Client) {
 				if UserInTeam(ctx, gh, member, team) {
 					membersFiltered = append(membersFiltered, *member)
 				}
-
 			}
 		}
 	} else {
