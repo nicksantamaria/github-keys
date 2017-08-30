@@ -13,14 +13,17 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
-	cliToken = kingpin.Flag("token", "GitHub API token").Envar("GITHUB_TOKEN").Required().String()
-	cliOrg   = kingpin.Flag("org", "Organisation members to sync").Required().String()
-	cliTeam  = kingpin.Flag("team", "Comma-separated list of team within organsation to sync").String()
-	cliFile  = kingpin.Flag("file", "Authorized keys file to write to.").Required().String()
-	cliOwner = kingpin.Flag("owner", "Enforce this owner").Required().String()
+	cliToken        = kingpin.Flag("token", "GitHub API token").Envar("GITHUB_TOKEN").Required().String()
+	cliOrg          = kingpin.Flag("org", "Organisation members to sync").Required().String()
+	cliTeam         = kingpin.Flag("team", "Comma-separated list of team within organsation to sync").String()
+	cliFile         = kingpin.Flag("file", "Authorized keys file to write to.").Required().String()
+	cliOwner        = kingpin.Flag("owner", "Enforce this owner").Required().String()
+	cliDaemon       = kingpin.Flag("daemon", "Runs in daemon mode").Bool()
+	cliDaemonPeriod = kingpin.Flag("daemon-period", "Time (in minutes) that key is updated").Default("5").Int()
 )
 
 func main() {
@@ -34,6 +37,19 @@ func main() {
 
 	ctx := context.Background()
 
+	if *cliDaemon == true {
+		log.Println("Running in daemon mode")
+		period := time.Duration(*cliDaemonPeriod) * time.Minute
+		for {
+			syncKeys(ctx, gh)
+			time.Sleep(period)
+		}
+	} else {
+		syncKeys(ctx, gh)
+	}
+}
+
+func syncKeys(ctx context.Context, gh *github.Client) {
 	// Retrieve the members of specified organisation.
 	members, _, err := gh.Organizations.ListMembers(ctx, *cliOrg, &github.ListMembersOptions{})
 	if err != nil {
