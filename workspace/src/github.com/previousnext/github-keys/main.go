@@ -84,7 +84,6 @@ func syncKeys(ctx context.Context, gh *github.Client) {
 	// Fetch public keys of filtered members.
 	keys := []Key{}
 	for _, member := range membersFiltered {
-		log.Info(member)
 		memberKeys, err := GetUserSSHKeys(ctx, gh, member)
 		if err != nil {
 			log.Println("failed to fetch public keys:", err)
