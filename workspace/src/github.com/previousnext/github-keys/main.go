@@ -4,16 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/google/go-github/github"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/oauth2"
-	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"os"
 	"os/user"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/go-github/github"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
