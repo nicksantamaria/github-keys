@@ -6,7 +6,7 @@ IMAGE=previousnext/github-keys
 release: build push
 
 build:
-	docker build -t ${IMAGE}:${VERSION} .
+	docker build -t ${IMAGE}:${VERSION} -t ${IMAGE}:latest .
 
 push:
 	docker push ${IMAGE}:${VERSION}
