@@ -171,8 +171,11 @@ func UserInTeam(ctx context.Context, gh *github.Client, user *github.User, team 
 	for _ = range ticker.C {
 		membership, _, err = gh.Organizations.GetTeamMembership(ctx, team.GetID(), user.GetLogin())
 		if err != nil {
-			log.Println("failed to retrieve user membership, retrying...")
-			continue
+			// 404 response code means the user is not in the team - not an API malfunction.
+			if strings.Contains(fmt.Sprintf("%s", err), "404 Not Found") == false {
+				log.Printf("failed to retrieve user membership, retrying... (error: %s)", err)
+				continue
+			}
 		}
 
 		ticker.Stop()
