@@ -10,3 +10,4 @@ build:
 
 push:
 	docker push ${IMAGE}:${VERSION}
+	docker push ${IMAGE}:latest

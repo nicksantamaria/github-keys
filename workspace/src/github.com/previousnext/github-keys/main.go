@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	"github.com/google/go-github/github"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
@@ -132,7 +133,21 @@ func syncKeys(ctx context.Context, gh *github.Client) {
 
 // GetTeamByName looks up a team by name.
 func GetTeamByName(ctx context.Context, gh *github.Client, org, name string) (*github.Team, error) {
-	teams, _, err := gh.Organizations.ListTeams(ctx, org, &github.ListOptions{})
+	ticker := backoff.NewTicker(backoff.NewExponentialBackOff())
+
+	var teams []*github.Team
+	var err error
+	for _ = range ticker.C {
+		teams, _, err = gh.Organizations.ListTeams(ctx, org, &github.ListOptions{})
+		if err != nil {
+			log.Println("failed to retrieve team, retrying...")
+			continue
+		}
+
+		ticker.Stop()
+		break
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +163,25 @@ func GetTeamByName(ctx context.Context, gh *github.Client, org, name string) (*g
 
 // UserInTeam returns boolean value indicating user is an active member of a team.
 func UserInTeam(ctx context.Context, gh *github.Client, user *github.User, team *github.Team) bool {
-	membership, _, _ := gh.Organizations.GetTeamMembership(ctx, team.GetID(), user.GetLogin())
+	ticker := backoff.NewTicker(backoff.NewExponentialBackOff())
+
+	var membership *github.Membership
+	var err error
+
+	for _ = range ticker.C {
+		membership, _, err = gh.Organizations.GetTeamMembership(ctx, team.GetID(), user.GetLogin())
+		if err != nil {
+			// 404 response code means the user is not in the team - not an API malfunction.
+			if strings.Contains(fmt.Sprintf("%s", err), "404 Not Found") == false {
+				log.Printf("failed to retrieve user membership, retrying... (error: %s)", err)
+				continue
+			}
+		}
+
+		ticker.Stop()
+		break
+	}
+
 	if membership.GetState() == "active" {
 		return true
 	}
@@ -158,8 +191,23 @@ func UserInTeam(ctx context.Context, gh *github.Client, user *github.User, team 
 
 // GetUserSSHKeys returns ssh public keys associated with the specified user.
 func GetUserSSHKeys(ctx context.Context, gh *github.Client, user github.User) ([]Key, error) {
+	ticker := backoff.NewTicker(backoff.NewExponentialBackOff())
+
+	var ghKeys []*github.Key
+	var err error
 	userKeys := []Key{}
-	ghKeys, _, err := gh.Users.ListKeys(ctx, user.GetLogin(), &github.ListOptions{})
+
+	for _ = range ticker.C {
+		ghKeys, _, err = gh.Users.ListKeys(ctx, user.GetLogin(), &github.ListOptions{})
+		if err != nil {
+			log.Println("failed to retrieve user ssh keys, retrying...")
+			continue
+		}
+
+		ticker.Stop()
+		break
+	}
+
 	for _, item := range ghKeys {
 		userKeys = append(userKeys, Key{
 			Comment: fmt.Sprintf("%s - %d", user.GetLogin(), item.GetID()),
