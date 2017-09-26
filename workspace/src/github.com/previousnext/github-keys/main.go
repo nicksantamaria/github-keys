@@ -53,7 +53,7 @@ func main() {
 
 func syncKeys(ctx context.Context, gh *github.Client) {
 	// Retrieve the members of specified organisation.
-	members, _, err := gh.Organizations.ListMembers(ctx, *cliOrg, &github.ListMembersOptions{})
+	members, err := ListOrgMembers(ctx, gh, *cliOrg)
 	if err != nil {
 		log.Println("failed to retrieve org members:", err)
 		os.Exit(1)
@@ -129,6 +129,26 @@ func syncKeys(ctx context.Context, gh *github.Client) {
 	}
 
 	log.Println("user permissions have been updated")
+}
+
+// ListOrgMembers returns members of specified organisation.
+func ListOrgMembers(ctx context.Context, gh *github.Client, org string) ([]*github.User, error) {
+	ticker := backoff.NewTicker(backoff.NewExponentialBackOff())
+
+	var members []*github.User
+	var err error
+	for _ = range ticker.C {
+		members, _, err = gh.Organizations.ListMembers(ctx, org, &github.ListMembersOptions{})
+		if err != nil {
+			log.Println("failed to retrieve org members, retrying...")
+			continue
+		}
+
+		ticker.Stop()
+		break
+	}
+
+	return members, err
 }
 
 // GetTeamByName looks up a team by name.
