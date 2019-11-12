@@ -2,12 +2,28 @@
 
 VERSION=$(shell git describe --tags --always)
 IMAGE=previousnext/github-keys
+NAME=github-keys
+PACKAGE=github.com/previousnext/$(NAME)
+LGFLAGS="-extldflags "-static""
 
-release: build push
-
+# Build binaries for linux/amd64 and darwin/amd64
 build:
+	gox -os='linux darwin' -arch='amd64' -output='bin/{{.Arch}}/{{.OS}}/$(NAME)' -ldflags=$(LGFLAGS) $(PACKAGE)
+
+
+# Run all lint checking with exit codes for CI
+lint:
+	golint -set_exit_status .
+
+# Run tests with coverage reporting
+test:
+	go test -cover ./...
+
+release: docker-build docker-push
+
+docker-build:
 	docker build -t ${IMAGE}:${VERSION} -t ${IMAGE}:latest .
 
-push:
+docker-push:
 	docker push ${IMAGE}:${VERSION}
 	docker push ${IMAGE}:latest
