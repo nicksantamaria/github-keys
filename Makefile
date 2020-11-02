@@ -1,9 +1,9 @@
 #!/usr/bin/make -f
 
 VERSION=$(shell git describe --tags --always)
-IMAGE=previousnext/github-keys
+IMAGE=nicksantamaria/github-keys
 NAME=github-keys
-PACKAGE=github.com/previousnext/$(NAME)
+PACKAGE=github.com/nicksantamaria/$(NAME)
 LGFLAGS="-extldflags "-static""
 
 # Build binaries for linux/amd64 and darwin/amd64

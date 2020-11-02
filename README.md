@@ -1,7 +1,7 @@
 GitHub: Authorized Keys
 ========================
 
-[![CircleCI](https://circleci.com/gh/previousnext/github-keys.svg?style=svg)](https://circleci.com/gh/previousnext/github-keys)
+[![CircleCI](https://circleci.com/gh/nicksantamaria/github-keys.svg?style=svg)](https://circleci.com/gh/nicksantamaria/github-keys)
 
 **Maintainer**: Nick Santamaria
 
