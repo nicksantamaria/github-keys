@@ -22,6 +22,7 @@ var (
 	cliToken      = kingpin.Flag("token", "GitHub API token").Envar("GITHUB_TOKEN").Required().String()
 	cliOrg        = kingpin.Flag("org", "Organisation members to sync").Required().String()
 	cliTeam       = kingpin.Flag("team", "Comma-separated list of team within organsation to sync").String()
+	cliRepo       = kingpin.Flag("repo", "Comma-separated list of repositories within organsation to get collaborators").String()
 	cliFile       = kingpin.Flag("file", "Authorized keys file to write to.").Required().String()
 	cliOwner      = kingpin.Flag("owner", "Enforce this owner").Required().String()
 	cliDaemon     = kingpin.Flag("daemon", "Runs in daemon mode").Bool()
@@ -30,6 +31,11 @@ var (
 
 func main() {
 	kingpin.Parse()
+
+	if *cliRepo != "" && *cliTeam != "" {
+		fmt.Println("Can not specify both --team and --repo flags")
+		os.Exit(1)
+	}
 
 	gh := github.NewClient(oauth2.NewClient(oauth2.NoContext, oauth2.StaticTokenSource(
 		&oauth2.Token{
@@ -76,9 +82,24 @@ func syncKeys(ctx context.Context, gh *github.Client) {
 				}
 			}
 		}
-	} else {
+	} else if *cliRepo == "" {
 		for _, member := range members {
 			membersFiltered = append(membersFiltered, *member)
+		}
+	}
+
+	// Grab collaborators for a repo if specified.
+	if *cliRepo != "" {
+		repos := strings.Split(*cliRepo, ",")
+		for _, repo := range repos {
+			collaborators, err := GetRepoCollaborators(ctx, gh, *cliOrg, repo)
+			if err != nil {
+				panic(err)
+			}
+
+			for _, collaborator := range collaborators {
+				membersFiltered = append(membersFiltered, *collaborator)
+			}
 		}
 	}
 
@@ -179,6 +200,28 @@ func GetTeamByName(ctx context.Context, gh *github.Client, org, name string) (*g
 	}
 
 	return nil, fmt.Errorf("Team %s not part of organisation %s", name, org)
+}
+
+// GetRepoCollaborators returns collaborators for a repo.
+func GetRepoCollaborators(ctx context.Context, gh *github.Client, orgName, orgRepo string) ([]*github.User, error) {
+	ticker := backoff.NewTicker(backoff.NewExponentialBackOff())
+
+	var users []*github.User
+	var err error
+	for range ticker.C {
+		ListOptions := &github.ListCollaboratorsOptions{}
+
+		users, _, err = gh.Repositories.ListCollaborators(ctx, orgName, orgRepo, ListOptions)
+		if err != nil {
+			log.Println("failed to retrieve collaborators, retrying...", err)
+			continue
+		}
+
+		ticker.Stop()
+		break
+	}
+
+	return users, err
 }
 
 // UserInTeam returns boolean value indicating user is an active member of a team.
