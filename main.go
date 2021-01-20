@@ -157,14 +157,21 @@ func ListOrgMembers(ctx context.Context, gh *github.Client, org string) ([]*gith
 	ticker := backoff.NewTicker(backoff.NewExponentialBackOff())
 
 	var members []*github.User
+	opt := &github.ListMembersOptions{}
 	var err error
 	for range ticker.C {
-		members, _, err = gh.Organizations.ListMembers(ctx, org, &github.ListMembersOptions{})
-		if err != nil {
-			log.Println("failed to retrieve org members, retrying...")
-			continue
+		for {
+			membersPage, resp, err := gh.Organizations.ListMembers(ctx, org, opt)
+			if err != nil {
+				log.Println("failed to retrieve org members, retrying...")
+				continue
+			}
+			members = append(members, membersPage...)
+			if resp.NextPage == 0 {
+				break
+			}
+			opt.Page = resp.NextPage
 		}
-
 		ticker.Stop()
 		break
 	}
